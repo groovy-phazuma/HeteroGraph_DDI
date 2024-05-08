@@ -23,9 +23,11 @@ from rdkit.Chem import AllChem
 import pandas as pd
 import numpy as np
 
-data_base_dir = '/workspace/home/azuma/DDI/github/Drug-Interaction-Research/drugbank_test/drugbank'# FIXME move the target file to this directory
+from pathlib import Path
+BASE_DIR = str(Path(__file__).parent.parent)
+print(BASE_DIR)
 
-df_drugs_smiles = pd.read_csv(data_base_dir + '/drug_smiles.csv') 
+df_drugs_smiles = pd.read_csv(BASE_DIR+'/data/drug_smiles.csv') 
 
 DRUG_TO_INDX_DICT = {drug_id: indx for indx, drug_id in enumerate(df_drugs_smiles['drug_id'])}
 
@@ -61,8 +63,8 @@ def atom_features(atom,
     results = one_of_k_encoding_unk(
         atom.GetSymbol(),
         ['C','N','O', 'S','F','Si','P', 'Cl','Br','Mg','Na','Ca','Fe','As','Al','I','B','V','K','Tl',
-        'Yb','Sb','Sn','Ag','Pd','Co','Se','Ti','Zn','H', 'Li','Ge','Cu','Au','Ni','Cd','In',
-        'Mn','Zr','Cr','Pt','Hg','Pb','Unknown'
+            'Yb','Sb','Sn','Ag','Pd','Co','Se','Ti','Zn','H', 'Li','Ge','Cu','Au','Ni','Cd','In',
+            'Mn','Zr','Cr','Pt','Hg','Pb','Unknown'
         ]) + [atom.GetDegree()/10, atom.GetImplicitValence(), 
                 atom.GetFormalCharge(), atom.GetNumRadicalElectrons()] + \
                 one_of_k_encoding_unk(atom.GetHybridization(), [
@@ -137,7 +139,7 @@ TOTAL_ATOM_FEATS = (next(iter(MOL_EDGE_LIST_FEAT_MTX.values()))[1].shape[-1])
 
 
 ##### DDI statistics and counting #######
-df_all_pos_ddi = pd.read_csv(data_base_dir + '/ddis.csv')
+df_all_pos_ddi = pd.read_csv(BASE_DIR+'/data/ddis.csv')
 all_pos_tup = [(h, t, r) for h, t, r in zip(df_all_pos_ddi['d1'], df_all_pos_ddi['d2'], df_all_pos_ddi['type'])]
 
 
@@ -214,10 +216,11 @@ class DrugDataset(Dataset):
         return len(self.tri_list)
     
     def __getitem__(self, index):
-        return self.tri_list[index]
+        return self.tri_list[index], index
 
     def collate_fn(self, batch):
 
+        original_index = []
         pos_rels = []
         pos_h_samples = []
         pos_t_samples = []
@@ -231,7 +234,8 @@ class DrugDataset(Dataset):
         neg_h_test = []
         neg_t_test = []
 
-        for h, t, r in batch:
+        for (h, t, r), o_idx in batch:
+            original_index.append(o_idx)
             pos_rels.append(r)
             h_data = self.__create_graph_data(h)
             t_data = self.__create_graph_data(t)
@@ -282,7 +286,7 @@ class DrugDataset(Dataset):
         neg_rels = torch.LongTensor(neg_rels).unsqueeze(0)
         neg_tri = (neg_h_samples, neg_t_samples, neg_rels, neg_b_samples)
 
-        return pos_tri, neg_tri
+        return pos_tri, neg_tri, original_index
     
             
     def __create_graph_data(self, id):
@@ -329,4 +333,5 @@ class DrugDataset(Dataset):
 class DrugDataLoader(DataLoader):
     def __init__(self, data, **kwargs):
         super().__init__(data, collate_fn=data.collate_fn, **kwargs)
+
 

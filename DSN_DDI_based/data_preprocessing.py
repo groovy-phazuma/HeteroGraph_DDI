@@ -202,10 +202,11 @@ class DrugDataset(Dataset):
         return len(self.tri_list)
     
     def __getitem__(self, index):
-        return self.tri_list[index]
+        return self.tri_list[index], index # add original index
 
     def collate_fn(self, batch):
         
+        original_index = []
         pos_rels = []
         pos_h_samples = []
         pos_t_samples = []
@@ -219,7 +220,8 @@ class DrugDataset(Dataset):
         neg_h_test = []
         neg_t_test = []
 
-        for h, t, r in batch:
+        for (h, t, r), o_idx in batch:
+            original_index.append(o_idx)
             pos_rels.append(r)
             h_data = self.__create_graph_data(h)
             t_data = self.__create_graph_data(t)
@@ -270,7 +272,7 @@ class DrugDataset(Dataset):
         neg_rels = torch.LongTensor(neg_rels).unsqueeze(0)
         neg_tri = (neg_h_samples, neg_t_samples, neg_rels, neg_b_samples)
 
-        return pos_tri, neg_tri
+        return pos_tri, neg_tri, original_index
     
             
     def __create_graph_data(self, id):

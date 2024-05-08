@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+Created on 2023-12-07 (Thu) 15:17:50
+
+References
+- https://github.com/microsoft/Drug-Interaction-Research/tree/DSN-DDI-for-DDI-Prediction
+- https://github.com/kanz76/GMPNN-CS
+
+
+@author: I.Azuma
+"""
 import itertools
 from collections import defaultdict
 from operator import neg
@@ -12,8 +23,11 @@ from rdkit.Chem import AllChem
 import pandas as pd
 import numpy as np
 
+from pathlib import Path
+BASE_DIR = str(Path(__file__).parent.parent)
+print(BASE_DIR)
 
-df_drugs_smiles = pd.read_csv('/workspace/home/azuma/DDI/github/Drug-Interaction-Research/drugbank_test/drugbank/drug_smiles.csv') # FIXME
+df_drugs_smiles = pd.read_csv(BASE_DIR+'/data/drug_smiles.csv') 
 
 DRUG_TO_INDX_DICT = {drug_id: indx for indx, drug_id in enumerate(df_drugs_smiles['drug_id'])}
 
@@ -125,7 +139,7 @@ TOTAL_ATOM_FEATS = (next(iter(MOL_EDGE_LIST_FEAT_MTX.values()))[1].shape[-1])
 
 
 ##### DDI statistics and counting #######
-df_all_pos_ddi = pd.read_csv('/workspace/home/azuma/DDI/github/Drug-Interaction-Research/drugbank_test/drugbank/ddis.csv')
+df_all_pos_ddi = pd.read_csv(BASE_DIR+'/data/ddis.csv')
 all_pos_tup = [(h, t, r) for h, t, r in zip(df_all_pos_ddi['d1'], df_all_pos_ddi['d2'], df_all_pos_ddi['type'])]
 
 
@@ -319,4 +333,5 @@ class DrugDataset(Dataset):
 class DrugDataLoader(DataLoader):
     def __init__(self, data, **kwargs):
         super().__init__(data, collate_fn=data.collate_fn, **kwargs)
+
 
